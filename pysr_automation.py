@@ -1,6 +1,7 @@
 import pandas as pd
 import re
 import os
+import sys
 import matplotlib.pyplot as plt
 
 def generate_hls_code_from_equations(csv_file, output_file):
@@ -56,9 +57,10 @@ def generate_tcl_script(df, base_dir, src_file):
             tcl.write(f"cd {base_dir}\n\n")
 
 def main():
-    ##### Tweak this #####
-    csv_file = 'hall_of_fame_2024-09-10_170009.145.csv'
-    ##### Tweak this #####
+    if len(sys.argv) != 2:
+        print("Usage: python pysr_automation.py <csv_file>")
+        sys.exit(1)
+    csv_file = sys.argv[1]
     # cd to the directory where the CSV file is located before running this script
     base_dir = os.getcwd()
     src_file = os.path.join(base_dir, 'hls_code_generated.c')
