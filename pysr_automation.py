@@ -35,7 +35,7 @@ def generate_hls_code_from_equations(csv_file, output_file):
             f.write("}\n\n")
 
 
-def generate_tcl_script(df, base_dir, src_file):
+def generate_tcl_script(df, base_dir, output_hls_file):
     complexities = df['Complexity'].unique()
     tcl_script = os.path.join(base_dir, "run_synthesis.tcl")
     with open(tcl_script, 'w') as tcl:
@@ -48,13 +48,14 @@ def generate_tcl_script(df, base_dir, src_file):
             tcl.write(f"cd {proj_path}\n")
             tcl.write(f"open_project {proj_name}\n")
             tcl.write(f"set_top func_{comp}\n")
-            tcl.write(f"add_files {src_file}\n")
+            tcl.write(f"add_files {output_hls_file}\n")
             tcl.write("open_solution solution1\n")
             tcl.write("set_part {xc7z020clg484-1}\n")
             tcl.write("create_clock -period 10 -name default\n")
             tcl.write("csynth_design\n")
             tcl.write("close_project\n")
             tcl.write(f"cd {base_dir}\n\n")
+        tcl.write("exit\n")
 
 def main():
     if len(sys.argv) != 2:
@@ -63,8 +64,7 @@ def main():
     csv_file = sys.argv[1]
     # cd to the directory where the CSV file is located before running this script
     base_dir = os.getcwd()
-    src_file = os.path.join(base_dir, 'hls_code_generated.c')
-    output_hls_file = src_file
+    output_hls_file = os.path.join(base_dir, 'hls_code_generated.c')
     output_tcl_file = os.path.join(base_dir, 'run_synthesis.tcl')
     print("This script generates HLS C code (Experimental) and a TCL script for each function in a CSV file. It also generates a graph of loss vs complexity.")
 
@@ -76,7 +76,7 @@ def main():
     else:
     # Generate HLS C code
         generate_hls_code_from_equations(csv_file, output_hls_file)
-        print("HLS C code has been generated successfully.")
+        print("HLS C code has been generated successfully.\n")
 
 
     # Check if the TCL script already exists
@@ -87,18 +87,26 @@ def main():
     else:
         # Generate TCL script
         df = pd.read_csv(csv_file)
-        generate_tcl_script(df, base_dir, src_file)
-        print("TCL script has been generated successfully.")
+        generate_tcl_script(df, base_dir, output_hls_file)
+        print("TCL script has been generated successfully.\n")
 
     # Generate graph of loss vs complexity
+    print("Generating graph of loss vs complexity...")
     df = pd.read_csv(csv_file)
+    # x axis should be integer values
     df.plot(x='Complexity', y='Loss', kind='line', marker='o')
     plt.xlabel('Complexity')
     plt.ylabel('Loss')
     plt.title('Loss vs Complexity')
     plt.grid(True)
-    plt.savefig('loss_vs_complexity.png')
-    print("Graph 'loss_vs_complexity.png' has been generated successfully.")
+    plt.xticks(df['Complexity'].astype(int))  # Ensure x-axis values are integers
+    if os.path.exists('loss_vs_complexity.png'):
+        overwrite = input("loss_vs_complexity.png already exists. Do you want to overwrite it? (y/n): ")
+    if overwrite.lower() == 'y':
+        plt.savefig('loss_vs_complexity.png')
+        print("Graph 'loss_vs_complexity.png' has been generated successfully.\n")
+    else:
+        print("Operation cancelled.")
 
 
 if __name__ == "__main__":

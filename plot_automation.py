@@ -18,13 +18,16 @@ def extract_data(json_file_path, complexity):
         print(f"Error decoding JSON from the file: {json_file_path}")
     return None, None, None
 
-def plot_data(complexities, utils, latencies):
-    ff_utils = [u['UTIL_FF'] for u in utils]
-    lut_utils = [u['UTIL_LUT'] for u in utils]
-    dsp_utils = [u['UTIL_DSP'] for u in utils]
-    avg_latencies = [l['LatencyAvg'] for l in latencies]
-    plt.figure(figsize=(12, 8))
+def convert_to_float_list(data_list):
+    return [float(item.replace('~0', '0')) for item in data_list]
 
+def plot_data(complexities, utils, latencies):
+    ff_utils = convert_to_float_list([u['UTIL_FF'] for u in utils])
+    lut_utils = convert_to_float_list([u['UTIL_LUT'] for u in utils])
+    dsp_utils = convert_to_float_list([u['UTIL_DSP'] for u in utils])
+    avg_latencies = convert_to_float_list([l['LatencyAvg'] for l in latencies])
+    plt.figure(figsize=(12, 8))
+    
     # Utilization plot
     plt.subplot(2, 1, 1)
     plt.plot(complexities, ff_utils, label='FF', marker='o')
@@ -35,6 +38,7 @@ def plot_data(complexities, utils, latencies):
     plt.title('Utilization Metrics')
     plt.legend()
     plt.grid(True)
+    plt.xticks(complexities)  # Ensure x-axis values are integers
 
     # Latency plot
     plt.subplot(2, 1, 2)
@@ -44,9 +48,16 @@ def plot_data(complexities, utils, latencies):
     plt.title('Latency Metrics')
     plt.legend()
     plt.grid(True)
+    plt.xticks(complexities)  # Ensure x-axis values are integers
 
     plt.tight_layout()
-    plt.savefig('synthesis_results.png')
+
+    if os.path.exists('synthesis_results.png'):
+        overwrite = input("synthesis_results.png already exists. Do you want to overwrite it? (y/n): ")
+    if overwrite.lower() == 'y':
+        plt.savefig('synthesis_results.png')
+    else:
+        print("Operation cancelled.")
     # plt.show()
 
 
@@ -68,12 +79,19 @@ def main(base_dir):
     # sort the complexities and correspond the complexities to the utilizations and latencies
     complexities, utilizations, latencies = zip(*sorted(zip(complexities, utilizations, latencies)))
     plot_data(complexities, utilizations, latencies)
+
+    print("\nSaving raw synthesis results to synthesis_results.csv...")
     df = pd.DataFrame({
         'Complexity': complexities,
         'Utilization': utilizations,
         'Latency': latencies
     })
-    df.to_csv(os.path.join(base_dir, 'synthesis_results.csv'), index=False)
+    if os.path.exists(os.path.join(base_dir, 'synthesis_results.csv')):
+        overwrite = input("synthesis_results.csv already exists. Do you want to overwrite it? (y/n): ")
+    if overwrite.lower() == 'y':
+        df.to_csv(os.path.join(base_dir, 'synthesis_results.csv'), index=False)
+    else:
+        print("Operation cancelled.")
 
 if __name__ == "__main__":
     # cd to the directory where the approx_* directories are located before running this script
